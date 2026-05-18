@@ -108,8 +108,8 @@ module.exports = (req, res) => {
                     data: {
                         ...parsedResult,
                         hardware: {
-                            ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
-                            cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
+                            ram: (ram && ram !== 'unknown' && !isNaN(ram) ? Number(ram) : ram || "unknown"),
+                            cpu_cores: (cpu && cpu !== 'unknown' && !isNaN(cpu) ? Number(cpu) : cpu || "unknown")
                         }
                     }
                 };
@@ -138,8 +138,8 @@ module.exports = (req, res) => {
         data: {
             ...result,
             hardware: {
-                ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
-                cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
+                ram: (ram && ram !== 'unknown' && !isNaN(ram) ? Number(ram) : ram || "unknown"),
+                cpu_cores: (cpu && cpu !== 'unknown' && !isNaN(cpu) ? Number(cpu) : cpu || "unknown")
             }
         }
     });
