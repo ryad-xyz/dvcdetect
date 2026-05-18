@@ -24,6 +24,25 @@ module.exports = (req, res) => {
         headers['user-agent'] = req.query.ua;
     }
     const result = new UAParser(headers).getResult().withClientHints();
+    
+    // Satukan data High-Entropy dari query params jika dikirim (Bypass Cross-Origin Client Hints)
+    if (req.query.arch && req.query.arch !== 'unknown') {
+        let arch = req.query.arch;
+        if (arch === 'arm' && req.query.bitness === '64') {
+            arch = 'arm64';
+        }
+        result.cpu.architecture = arch;
+    }
+    if (req.query.bitness && req.query.bitness !== 'unknown') result.cpu.bitness = req.query.bitness;
+    if (req.query.osVersion && req.query.osVersion !== 'unknown') result.os.version = req.query.osVersion;
+    if (req.query.browserVersion && req.query.browserVersion !== 'unknown' && result.browser.name) {
+        result.browser.version = req.query.browserVersion;
+        result.browser.major = req.query.browserVersion.split('.')[0];
+        if (result.engine.name === 'Blink') {
+            result.engine.version = req.query.browserVersion;
+        }
+    }
+
     const ram = req.query.ram;
     const cpu = req.query.cpu;
 
