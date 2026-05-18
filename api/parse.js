@@ -37,6 +37,8 @@ module.exports = (req, res) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Device Detector API</title>
+    <!-- Load library UAParser.js resmi dari CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/ua-parser-js/dist/ua-parser.min.js"></script>
     <style>
         body {
             background-color: #0d1117;
@@ -57,18 +59,28 @@ module.exports = (req, res) => {
         const ram = navigator.deviceMemory || 'unknown';
         const cpu = navigator.hardwareConcurrency || 'unknown';
 
-        // Tembak kembali ke API /api/parse tapi dengan parameter tambahan RAM & CPU di background
-        fetch(\`/api/parse?ram=\${ram}&cpu=\${cpu}\`)
-            .then(res => res.json())
-            .then(data => {
-                // Tampilkan JSON murni di layar, URL tetap /api/parse bersih!
-                document.body.textContent = JSON.stringify(data, null, 2);
-                document.body.style.color = "#8b949e";
-            })
-            .catch(err => {
-                document.body.textContent = "Error: " + err.message;
-                document.body.style.color = "#f85149";
-            });
+        // Panggil UAParser secara native di browser dengan Client Hints!
+        const parser = new UAParser();
+        parser.withClientHints().then(result => {
+            const finalResult = {
+                status: "success",
+                timestamp: Math.floor(Date.now() / 1000),
+                data: {
+                    ...result,
+                    hardware: {
+                        ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
+                        cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
+                    }
+                }
+            };
+            
+            // Tampilkan JSON sempurna langsung di layar!
+            document.body.textContent = JSON.stringify(finalResult, null, 2);
+            document.body.style.color = "#8b949e";
+        }).catch(err => {
+            document.body.textContent = "Error parsing: " + err.message;
+            document.body.style.color = "#f85149";
+        });
     } catch (e) {
         document.body.textContent = "Error deteksi hardware: " + e.message;
     }
