@@ -12,9 +12,19 @@ module.exports = (req, res) => {
     const ua = req.query.ua || req.headers['user-agent'] || '';
     const parser = new UAParser(ua);
     const result = parser.getResult();
+
+    const ram = req.query.ram || 'unknown';
+    const cpu = req.query.cpu || 'unknown';
+
     res.status(200).json({
         status: 'success',
         timestamp: Math.floor(Date.now() / 1000),
-        data: result
+        data: {
+            ...result,
+            hardware: {
+                ram: ram + " GB",
+                cpu_cores: cpu + " Cores"
+            }
+        }
     });
 };
