@@ -1,6 +1,8 @@
 const { UAParser } = require('ua-parser-js');
 
 module.exports = (req, res) => {
+    // 1. Matikan Cache agar data selalu segar (Real-Time) dan tidak mengambil dari memori cache
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -38,8 +40,11 @@ module.exports = (req, res) => {
         }
     </style>
 </head>
-<body>Mendeteksi spesifikasi hardware...<script>
-    document.addEventListener("DOMContentLoaded", function() {
+<body>Mendeteksi spesifikasi hardware...
+
+<script>
+    // Langsung jalankan secara agresif tanpa menunggu DOMContentLoaded!
+    try {
         const ram = navigator.deviceMemory || 'unknown';
         const cpu = navigator.hardwareConcurrency || 'unknown';
 
@@ -55,7 +60,9 @@ module.exports = (req, res) => {
                 document.body.textContent = "Error: " + err.message;
                 document.body.style.color = "#f85149";
             });
-    });
+    } catch (e) {
+        document.body.textContent = "Error deteksi hardware: " + e.message;
+    }
 </script>
 </body>
 </html>
@@ -74,8 +81,8 @@ module.exports = (req, res) => {
         data: {
             ...result,
             hardware: {
-                ram: (ram ? ram + " GB" : "unknown"),
-                cpu_cores: (cpu ? cpu + " Cores" : "unknown")
+                ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
+                cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
             }
         }
     });
