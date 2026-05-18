@@ -1,0 +1,9 @@
+{
+    "name": "devdetect",
+    "version": "1.0.0",
+    "description": "User-Agent Microservice",
+    "main": "api/parse.js",
+    "dependencies": {
+        "ua-parser-js": "^2.0.0"
+    }
+}
