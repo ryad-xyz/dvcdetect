@@ -24,7 +24,7 @@ module.exports = (req, res) => {
         headers['user-agent'] = req.query.ua;
     }
     const result = new UAParser(headers).getResult().withClientHints();
-    
+
     // Satukan data High-Entropy dari query params jika dikirim (Bypass Cross-Origin Client Hints)
     if (req.query.arch && req.query.arch !== 'unknown') {
         let arch = req.query.arch;
@@ -81,21 +81,43 @@ module.exports = (req, res) => {
         // Panggil UAParser secara native di browser dengan Client Hints!
         const parser = new UAParser();
         parser.getResult().withClientHints().then(result => {
-            const finalResult = {
-                status: "success",
-                timestamp: Math.floor(Date.now() / 1000),
-                data: {
-                    ...result,
-                    hardware: {
-                        ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
-                        cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
+            // Sempurnakan bitness dan arsitektur di cpu object secara native
+            if (navigator.userAgentData) {
+                navigator.userAgentData.getHighEntropyValues(['architecture', 'bitness']).then(ua => {
+                    let arch = ua.architecture || 'unknown';
+                    const bitness = ua.bitness || 'unknown';
+                    
+                    if (arch === 'arm' && bitness === '64') {
+                        arch = 'arm64';
                     }
-                }
-            };
-            
-            // Tampilkan JSON sempurna langsung di layar!
-            document.body.textContent = JSON.stringify(finalResult, null, 2);
-            document.body.style.color = "#8b949e";
+                    
+                    result.cpu = result.cpu || {};
+                    result.cpu.architecture = arch;
+                    result.cpu.bitness = bitness;
+                    
+                    renderResult(result);
+                }).catch(() => renderResult(result));
+            } else {
+                renderResult(result);
+            }
+
+            function renderResult(parsedResult) {
+                const finalResult = {
+                    status: "success",
+                    timestamp: Math.floor(Date.now() / 1000),
+                    data: {
+                        ...parsedResult,
+                        hardware: {
+                            ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
+                            cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown")
+                        }
+                    }
+                };
+                
+                // Tampilkan JSON sempurna langsung di layar!
+                document.body.textContent = JSON.stringify(finalResult, null, 2);
+                document.body.style.color = "#8b949e";
+            }
         }).catch(err => {
             document.body.textContent = "Error parsing: " + err.message;
             document.body.style.color = "#f85149";
