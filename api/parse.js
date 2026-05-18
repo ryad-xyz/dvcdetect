@@ -18,15 +18,15 @@ module.exports = (req, res) => {
         return;
     }
 
-    // 2. Gunakan parser bawaan dengan .withClientHints() secara native!
-    //    Ini akan otomatis menerjemahkan CPU Arch, Bitness, OS, dan Device Model dari header Sec-CH-UA-*
-    const result = UAParser(req.headers).withClientHints();
-
-    // Ambil data RAM dan CPU dari query parameter (bila dikirim oleh client)
+    // Gabungkan query UA ke headers jika dilemparkan oleh cURL backend
+    const headers = { ...req.headers };
+    if (req.query.ua) {
+        headers['user-agent'] = req.query.ua;
+    }
+    const result = new UAParser(headers).getResult().withClientHints();
     const ram = req.query.ram;
     const cpu = req.query.cpu;
 
-    // Jika RAM dan CPU belum ada, dan request ini dibuka langsung dari browser (Accept HTML)
     const acceptHeader = req.headers['accept'] || '';
     if (!ram && !cpu && acceptHeader.includes('text/html')) {
         res.setHeader('Content-Type', 'text/html');
@@ -91,7 +91,6 @@ module.exports = (req, res) => {
         return;
     }
 
-    // 3. Jika dipanggil via API fetch atau sudah ada parameter, kembalikan JSON
     res.status(200).json({
         status: 'success',
         timestamp: Math.floor(Date.now() / 1000),
