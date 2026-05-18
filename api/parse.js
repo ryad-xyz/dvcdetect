@@ -61,7 +61,7 @@ module.exports = (req, res) => {
 
         // Panggil UAParser secara native di browser dengan Client Hints!
         const parser = new UAParser();
-        parser.withClientHints().then(result => {
+        parser.getResult().withClientHints().then(result => {
             const finalResult = {
                 status: "success",
                 timestamp: Math.floor(Date.now() / 1000),
