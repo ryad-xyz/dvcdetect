@@ -1,6 +1,9 @@
 const { UAParser } = require('ua-parser-js');
 
 module.exports = (req, res) => {
+    // 1. Kirim "Kunci Kontak" (Accept-CH) agar browser Chrome mau membuka data CPU & Bitness
+    res.setHeader('Accept-CH', 'Sec-CH-UA-Arch, Sec-CH-UA-Bitness, Sec-CH-UA-Model, Sec-CH-UA-Platform');
+
     // Matikan Cache agar data selalu segar (Real-Time)
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,11 +15,14 @@ module.exports = (req, res) => {
         return;
     }
 
-    // Ambil data RAM, CPU, dan UA Hints dari query parameter
+    // Fungsi pembersih tanda kutip jika data dikirim lewat HTTP Header
+    const clean = (val) => val ? val.replace(/"/g, '') : '';
+
+    // Ambil data RAM, CPU, dan UA Hints dari query parameter atau dari HTTP Headers asli
     const ram = req.query.ram;
     const cpu = req.query.cpu;
-    const arch = req.query.arch;
-    const bitness = req.query.bitness;
+    const arch = clean(req.query.arch || req.headers['sec-ch-ua-arch']);
+    const bitness = clean(req.query.bitness || req.headers['sec-ch-ua-bitness']);
 
     // Jika RAM dan CPU belum ada, dan request ini dibuka langsung dari browser (Accept HTML)
     const acceptHeader = req.headers['accept'] || '';
@@ -45,7 +51,6 @@ module.exports = (req, res) => {
 <body>Mendeteksi spesifikasi hardware...
 
 <script>
-    // Gunakan fungsi asynchronous untuk membaca UA Hints secara real-time
     async function detectDevice() {
         try {
             const ram = navigator.deviceMemory || 'unknown';
@@ -54,9 +59,10 @@ module.exports = (req, res) => {
             let arch = 'unknown';
             let bitness = 'unknown';
 
-            // 1. Baca User-Agent Client Hints secara modern!
+            // 2. Baca User-Agent Client Hints secara modern!
             if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
                 try {
+                    // Karena server sudah memberi izin lewat 'Accept-CH', Chrome akan membuka datanya di sini!
                     const hints = await navigator.userAgentData.getHighEntropyValues(['architecture', 'bitness']);
                     arch = hints.architecture || 'unknown';
                     bitness = hints.bitness || 'unknown';
@@ -65,11 +71,10 @@ module.exports = (req, res) => {
                 }
             }
 
-            // 2. Tembak kembali ke API /api/parse dengan data hardware sangat lengkap
+            // 3. Tembak kembali ke API /api/parse dengan data hardware sangat lengkap
             fetch(\`/api/parse?ram=\${ram}&cpu=\${cpu}&arch=\${arch}&bitness=\${bitness}\`)
                 .then(res => res.json())
                 .then(data => {
-                    // Tampilkan JSON murni di layar, URL tetap /api/parse bersih!
                     document.body.textContent = JSON.stringify(data, null, 2);
                     document.body.style.color = "#8b949e";
                 })
@@ -95,19 +100,21 @@ module.exports = (req, res) => {
     const parser = new UAParser(ua);
     const result = parser.getResult();
 
+    // Gabungkan hasil akhir
+    const finalArch = (arch && arch !== 'unknown' && arch !== '') ? arch : (result.cpu.architecture || undefined);
+
     res.status(200).json({
         status: 'success',
         timestamp: Math.floor(Date.now() / 1000),
         data: {
             ...result,
-            // 3. Gabungkan arsitektur CPU hasil deteksi UA Hints ke variabel CPU asli
             cpu: {
-                architecture: (arch && arch !== 'unknown' ? arch : (result.cpu.architecture || undefined))
+                architecture: finalArch
             },
             hardware: {
                 ram: (ram && ram !== 'unknown' ? ram + " GB" : "unknown"),
                 cpu_cores: (cpu && cpu !== 'unknown' ? cpu + " Cores" : "unknown"),
-                bitness: (bitness && bitness !== 'unknown' ? bitness + "-bit" : "unknown")
+                bitness: (bitness && bitness !== 'unknown' && bitness !== '' ? bitness + "-bit" : "unknown")
             }
         }
     });
