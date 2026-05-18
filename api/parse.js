@@ -9,12 +9,64 @@ module.exports = (req, res) => {
         res.status(200).end();
         return;
     }
+
+    // Ambil data RAM dan CPU dari query parameter (bila dikirim oleh client)
+    const ram = req.query.ram;
+    const cpu = req.query.cpu;
+
+    // Jika RAM dan CPU belum ada, dan request ini dibuka langsung dari browser (Accept HTML)
+    const acceptHeader = req.headers['accept'] || '';
+    if (!ram && !cpu && acceptHeader.includes('text/html')) {
+        res.setHeader('Content-Type', 'text/html');
+        res.status(200).send(`
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Detector API</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #58a6ff;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            padding: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>Mendeteksi spesifikasi hardware...<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const ram = navigator.deviceMemory || 'unknown';
+        const cpu = navigator.hardwareConcurrency || 'unknown';
+
+        // Tembak kembali ke API /api/parse tapi dengan parameter di background
+        fetch(\`/api/parse?ram=\${ram}&cpu=\${cpu}\`)
+            .then(res => res.json())
+            .then(data => {
+                // Tampilkan JSON murni di layar, URL tetap /api/parse bersih!
+                document.body.textContent = JSON.stringify(data, null, 2);
+                document.body.style.color = "#8b949e";
+            })
+            .catch(err => {
+                document.body.textContent = "Error: " + err.message;
+                document.body.style.color = "#f85149";
+            });
+    });
+</script>
+</body>
+</html>
+        `);
+        return;
+    }
+
+    // Jika dipanggil via API fetch atau sudah ada parameter, kembalikan JSON seperti biasa
     const ua = req.query.ua || req.headers['user-agent'] || '';
     const parser = new UAParser(ua);
     const result = parser.getResult();
-
-    const ram = req.query.ram || 'unknown';
-    const cpu = req.query.cpu || 'unknown';
 
     res.status(200).json({
         status: 'success',
@@ -22,8 +74,8 @@ module.exports = (req, res) => {
         data: {
             ...result,
             hardware: {
-                ram: ram + " GB",
-                cpu_cores: cpu + " Cores"
+                ram: (ram ? ram + " GB" : "unknown"),
+                cpu_cores: (cpu ? cpu + " Cores" : "unknown")
             }
         }
     });
